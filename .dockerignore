@@ -1,0 +1,13 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+.next
+.git
+.gitignore
+README.md
+# Add any other files or directories that should not be included in the Docker image
+# e.g., local development configuration files, test files, etc.
+# .env.local
+# *.test.ts
+# *.spec.ts

@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Cpu, MemoryStick, HardDrive, type LucideProps } from "lucide-react"; // Import specific icons
+import { Cpu, MemoryStick, HardDrive, Thermometer, type LucideProps } from "lucide-react"; // Import specific icons
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from 'date-fns';
 
 // Define the possible icon names as a union type
-export type ResourceIconName = "Cpu" | "MemoryStick" | "HardDrive";
+export type ResourceIconName = "Cpu" | "MemoryStick" | "HardDrive" | "Thermometer";
 
 interface ResourceChartProps {
   iconName: ResourceIconName;
@@ -35,6 +35,7 @@ const IconMap: Record<ResourceIconName, React.FC<LucideProps>> = {
   Cpu,
   MemoryStick,
   HardDrive,
+  Thermometer,
 };
 
 export default function ResourceChart({
@@ -56,9 +57,19 @@ export default function ResourceChart({
     const now = new Date();
     for (let i = maxDataPoints -1; i >= 0; i--) {
       const time = new Date(now.getTime() - i * updateInterval);
+      let simulatedUsage: number;
+      if (title.includes("CPU Usage")) {
+        simulatedUsage = Math.floor(Math.random() * 80); // 0-79
+      } else if (title.includes("RAM")) {
+        simulatedUsage = Math.floor(Math.random() * 60); // 0-59
+      } else if (title.includes("Temperature")) {
+        simulatedUsage = Math.floor(Math.random() * 50) + 40; // 40-89 °C
+      } else { // Disk Usage or other
+        simulatedUsage = Math.floor(Math.random() * 40); // 0-39
+      }
       initialData.push({
         time: format(time, 'HH:mm:ss'),
-        usage: Math.floor(Math.random() * (title.includes("CPU") ? 80 : title.includes("RAM") ? 60 : 40)), // Simulate different usage patterns
+        usage: simulatedUsage,
       });
     }
     setChartData(initialData);
@@ -66,9 +77,19 @@ export default function ResourceChart({
 
     const intervalId = setInterval(() => {
       setChartData((prevData) => {
+        let newUsage: number;
+        if (title.includes("CPU Usage")) {
+          newUsage = Math.floor(Math.random() * 70) + 10; // 10-79
+        } else if (title.includes("RAM")) {
+          newUsage = Math.floor(Math.random() * 50) + 10; // 10-59
+        } else if (title.includes("Temperature")) {
+          newUsage = Math.floor(Math.random() * 50) + 40; // 40-89 °C
+        } else { // Disk Usage or other
+          newUsage = Math.floor(Math.random() * 30) + 10; // 10-39
+        }
         const newDataPoint: ChartDataPoint = {
           time: format(new Date(), 'HH:mm:ss'),
-          usage: Math.floor(Math.random() * (title.includes("CPU") ? 80 : title.includes("RAM") ? 60 : 40) + 10), // Random usage between 10 and (80/60/40)+10
+          usage: newUsage,
         };
         const updatedData = [...prevData, newDataPoint];
         if (updatedData.length > maxDataPoints) {
@@ -114,7 +135,7 @@ export default function ResourceChart({
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value} // Show HH:mm:ss from HH:mm:ss formatted time
+                  tickFormatter={(value) => value} 
                   className="text-xs"
                 />
                 <YAxis
@@ -122,7 +143,7 @@ export default function ResourceChart({
                   axisLine={false}
                   tickMargin={8}
                   domain={[0, 100]}
-                  tickFormatter={(value) => `${value}${dataUnit === "%" ? "%" : ""}`}
+                  tickFormatter={(value) => `${value}${dataUnit}`}
                   className="text-xs"
                 />
                 <ChartTooltip
