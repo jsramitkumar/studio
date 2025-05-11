@@ -114,7 +114,7 @@ export default function ResourceChart({
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value.slice(-5)} // Show mm:ss from HH:mm:ss formatted time
+                  tickFormatter={(value) => value} // Show HH:mm:ss from HH:mm:ss formatted time
                   className="text-xs"
                 />
                 <YAxis
