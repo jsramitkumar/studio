@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format } from 'date-fns';
 
 // Define the possible icon names as a union type
 export type ResourceIconName = "Cpu" | "MemoryStick" | "HardDrive";
@@ -56,7 +57,7 @@ export default function ResourceChart({
     for (let i = maxDataPoints -1; i >= 0; i--) {
       const time = new Date(now.getTime() - i * updateInterval);
       initialData.push({
-        time: time.toLocaleTimeString(),
+        time: format(time, 'HH:mm:ss'),
         usage: Math.floor(Math.random() * (title.includes("CPU") ? 80 : title.includes("RAM") ? 60 : 40)), // Simulate different usage patterns
       });
     }
@@ -66,7 +67,7 @@ export default function ResourceChart({
     const intervalId = setInterval(() => {
       setChartData((prevData) => {
         const newDataPoint: ChartDataPoint = {
-          time: new Date().toLocaleTimeString(),
+          time: format(new Date(), 'HH:mm:ss'),
           usage: Math.floor(Math.random() * (title.includes("CPU") ? 80 : title.includes("RAM") ? 60 : 40) + 10), // Random usage between 10 and (80/60/40)+10
         };
         const updatedData = [...prevData, newDataPoint];
@@ -113,7 +114,7 @@ export default function ResourceChart({
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value.slice(-5)} // Show last 5 chars of time HH:MM
+                  tickFormatter={(value) => value.slice(-5)} // Show mm:ss from HH:mm:ss formatted time
                   className="text-xs"
                 />
                 <YAxis
