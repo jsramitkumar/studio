@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" > {/* Removed Geist font variables */}
+    <html lang="en">
       <body className="antialiased">
         {children}
         <Toaster />
