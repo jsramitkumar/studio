@@ -1,13 +1,13 @@
 // src/components/dashboard/ServerStatsCard.tsx
 "use client";
 
-import { Server, Clock, Binary, Cpu, type LucideProps } from "lucide-react";
+import { Server, Clock, Binary, Cpu, Laptop, Timer, type LucideProps } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 
 // Define the possible icon names as a union type
-export type ServerStatIconName = "Server" | "Clock" | "Binary" | "Cpu";
+export type ServerStatIconName = "Server" | "Clock" | "Binary" | "Cpu" | "Laptop" | "Timer";
 
 interface ServerStatsCardProps {
   iconName: ServerStatIconName;
@@ -22,6 +22,8 @@ const IconMap: Record<ServerStatIconName, React.FC<LucideProps>> = {
   Clock,
   Binary,
   Cpu,
+  Laptop,
+  Timer,
 };
 
 export default function ServerStatsCard({ iconName, title, value, isTime = false, className }: ServerStatsCardProps) {
@@ -41,10 +43,11 @@ export default function ServerStatsCard({ iconName, title, value, isTime = false
       setIsLoading(false);
       return () => clearInterval(timerId);
     } else {
+      // For non-time values, update if the prop 'value' changes
       setDisplayValue(value);
-      setIsLoading(false);
+      setIsLoading(false); // Assume loaded once value is processed
     }
-  }, [isTime, value]);
+  }, [isTime, value]); // Rerun if 'value' changes for non-time cards
   
   const finalDisplayValue = isTime ? currentTime : displayValue;
 
@@ -55,7 +58,7 @@ export default function ServerStatsCard({ iconName, title, value, isTime = false
         {IconComponent && <IconComponent className="h-5 w-5 text-accent" />}
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isLoading && !isTime && value === undefined ? ( // Show skeleton if loading and value isn't set yet (for async fetched values handled by parent)
           <Skeleton className="h-8 w-3/4" />
         ) : (
           <div className="text-2xl font-bold text-foreground truncate" title={finalDisplayValue}>

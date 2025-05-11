@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Cpu, MemoryStick, HardDrive, Thermometer, type LucideProps } from "lucide-react"; // Import specific icons
+import { Cpu, MemoryStick, HardDrive, Thermometer, type LucideProps } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -14,7 +14,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } fro
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from 'date-fns';
 
-// Define the possible icon names as a union type
 export type ResourceIconName = "Cpu" | "MemoryStick" | "HardDrive" | "Thermometer";
 
 interface ResourceChartProps {
@@ -23,7 +22,7 @@ interface ResourceChartProps {
   description: string;
   dataUnit?: string;
   maxDataPoints?: number;
-  updateInterval?: number; // in milliseconds
+  updateInterval?: number; 
 }
 
 interface ChartDataPoint {
@@ -38,76 +37,94 @@ const IconMap: Record<ResourceIconName, React.FC<LucideProps>> = {
   Thermometer,
 };
 
+const API_BASE_URL = 'http://localhost:3001/api/resources/live';
+
 export default function ResourceChart({
   iconName,
   title,
   description,
   dataUnit = "%",
-  maxDataPoints = 30, // Show last 30 data points
-  updateInterval = 2000, // Update every 2 seconds
+  maxDataPoints = 30,
+  updateInterval = 2000,
 }: ResourceChartProps) {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const IconComponent = IconMap[iconName];
 
   useEffect(() => {
-    // Initial data generation
-    const initialData: ChartDataPoint[] = [];
-    const now = new Date();
-    for (let i = maxDataPoints -1; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * updateInterval);
-      let simulatedUsage: number;
-      if (title.includes("CPU Usage")) {
-        simulatedUsage = Math.floor(Math.random() * 80); // 0-79
-      } else if (title.includes("RAM")) {
-        simulatedUsage = Math.floor(Math.random() * 60); // 0-59
-      } else if (title.includes("Temperature")) {
-        simulatedUsage = Math.floor(Math.random() * 50) + 40; // 40-89 °C
-      } else { // Disk Usage or other
-        simulatedUsage = Math.floor(Math.random() * 40); // 0-39
-      }
-      initialData.push({
-        time: format(time, 'HH:mm:ss'),
-        usage: simulatedUsage,
-      });
-    }
-    setChartData(initialData);
-    setIsLoading(false);
+    let isMounted = true;
 
-    const intervalId = setInterval(() => {
-      setChartData((prevData) => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(API_BASE_URL);
+        if (!isMounted) return;
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => `API request failed with status: ${response.status}`);
+          console.error(`API request failed: ${response.status}`, errorText);
+          setError(`API Error: ${response.status}`);
+          if (isLoading) setIsLoading(false);
+          return;
+        }
+        
+        const data = await response.json();
+        setError(null); // Clear previous errors
+        if (isLoading) setIsLoading(false);
+
         let newUsage: number;
         if (title.includes("CPU Usage")) {
-          newUsage = Math.floor(Math.random() * 70) + 10; // 10-79
+          newUsage = data.cpuUsage ?? 0;
         } else if (title.includes("RAM")) {
-          newUsage = Math.floor(Math.random() * 50) + 10; // 10-59
+          newUsage = data.ramUsage ?? 0;
+        } else if (title.includes("Disk")) {
+          newUsage = data.diskUsage ?? 0;
         } else if (title.includes("Temperature")) {
-          newUsage = Math.floor(Math.random() * 50) + 40; // 40-89 °C
-        } else { // Disk Usage or other
-          newUsage = Math.floor(Math.random() * 30) + 10; // 10-39
+          newUsage = data.cpuTemperature ?? 0; 
+        } else {
+          newUsage = 0;
         }
+        
         const newDataPoint: ChartDataPoint = {
           time: format(new Date(), 'HH:mm:ss'),
-          usage: newUsage,
+          usage: parseFloat(newUsage.toFixed(1)), // Ensure usage is a number, round to 1 decimal
         };
-        const updatedData = [...prevData, newDataPoint];
-        if (updatedData.length > maxDataPoints) {
-          return updatedData.slice(updatedData.length - maxDataPoints);
-        }
-        return updatedData;
-      });
-    }, updateInterval);
 
-    return () => clearInterval(intervalId);
-  }, [title, maxDataPoints, updateInterval]);
+        setChartData((prevData) => {
+          const updatedData = [...prevData, newDataPoint];
+          if (updatedData.length > maxDataPoints) {
+            return updatedData.slice(-maxDataPoints);
+          }
+          return updatedData;
+        });
+
+      } catch (e) {
+        if (!isMounted) return;
+        console.error("Failed to fetch resource data:", e);
+        setError("Network error or API unavailable.");
+        if (isLoading) setIsLoading(false);
+      }
+    };
+
+    fetchData();
+    const intervalId = setInterval(fetchData, updateInterval);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, maxDataPoints, updateInterval]); // Deliberately not including isLoading or error
 
   const chartConfig = useMemo(() => ({
     usage: {
       label: `Usage (${dataUnit})`,
-      color: "hsl(var(--chart-1))", // Uses Teal from globals.css
+      color: "hsl(var(--chart-1))",
     },
   } satisfies ChartConfig), [dataUnit]);
+
+  const yAxisDomain: [number, number] = title.includes("Temperature") ? [0, 100] : [0, 100];
 
 
   return (
@@ -122,6 +139,10 @@ export default function ResourceChart({
       <CardContent className="flex-grow">
         {isLoading ? (
           <Skeleton className="h-[250px] w-full" />
+        ) : error ? (
+          <div className="flex items-center justify-center h-[250px]">
+            <p className="text-destructive">{error}</p>
+          </div>
         ) : chartData.length > 0 ? (
           <ChartContainer config={chartConfig} className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -142,7 +163,7 @@ export default function ResourceChart({
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  domain={[0, 100]}
+                  domain={yAxisDomain}
                   tickFormatter={(value) => `${value}${dataUnit}`}
                   className="text-xs"
                 />
@@ -156,8 +177,7 @@ export default function ResourceChart({
                   stroke="var(--color-usage)"
                   strokeWidth={2}
                   dot={false}
-                  isAnimationActive={true}
-                  animationDuration={300}
+                  isAnimationActive={false} // Smoother updates with real-time data
                 />
               </LineChart>
             </ResponsiveContainer>
